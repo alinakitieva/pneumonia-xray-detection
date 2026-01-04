@@ -3,6 +3,7 @@ defaults:
   - data: default
   - model: resnet18
   - trainer: default
+  - logging: mlflow
   - _self_
 
 # Output directories

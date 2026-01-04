@@ -1,0 +1,5 @@
+# MLflow logging configuration
+tracking_uri: "http://127.0.0.1:8080"
+experiment_name: "pneumonia_xray"
+run_name: null # auto-generated from timestamp if null
+log_model: false # enable later for model serving
