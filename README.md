@@ -107,6 +107,23 @@ Output format:
 path=data/raw/chest_xray/test/NORMAL/IM-0001-0001.jpeg prob=0.2104 pred=NORMAL
 ```
 
+### Model Export (ONNX/TensorRT)
+
+```bash
+# Export trained model to ONNX (and TensorRT if available)
+uv run python -m pneumonia_xray.commands export
+
+# Export with FP32 TensorRT (instead of FP16)
+uv run python -m pneumonia_xray.commands export tensorrt.fp16=false
+```
+
+Export generates:
+
+- `artifacts/export/model.onnx` - ONNX model for portable inference
+- `artifacts/export/metadata.json` - Preprocessing config (normalization, threshold)
+- `artifacts/export/validation_onnx.json` - Numerical validation report
+- `artifacts/export/model.trt` - TensorRT engine (if trtexec available)
+
 ### MLflow Experiment Tracking
 
 ```bash
@@ -140,6 +157,7 @@ All hyperparameters are managed via Hydra YAML configs:
 configs/
 ├── train.yaml           # Main training config
 ├── infer.yaml           # Main inference config
+├── export.yaml          # Model export config
 ├── data/default.yaml    # Data loading & augmentation
 ├── model/resnet18.yaml  # Model architecture
 ├── trainer/default.yaml # Training settings
@@ -175,6 +193,7 @@ uv run pytest
 | Metrics               | torchmetrics        |
 | Config                | Hydra               |
 | Experiment tracking   | MLflow              |
+| Model export          | ONNX, TensorRT      |
 | Data versioning       | DVC + Cloudflare R2 |
 | Dependency management | uv                  |
 | Code quality          | ruff, pre-commit    |

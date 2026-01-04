@@ -1,0 +1,31 @@
+# Export configuration for ONNX and TensorRT
+defaults:
+  - data: default
+  - postprocess: default
+  - _self_
+
+# Paths
+checkpoint_path: artifacts/checkpoints/best.ckpt
+output_dir: artifacts/export
+
+# ONNX settings
+onnx:
+  path: ${output_dir}/model.onnx
+  opset_version: 18
+  input_name: input
+  output_name: logits
+
+# TensorRT settings
+tensorrt:
+  path: ${output_dir}/model.trt
+  fp16: true
+
+# Validation settings
+validation:
+  rtol: 1e-3
+  atol: 1e-5
+  tensorrt_rtol: 1e-2
+  tensorrt_atol: 1e-3
+
+# Sample images for validation
+samples_dir: artifacts/samples
