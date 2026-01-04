@@ -45,3 +45,9 @@ src_paths = ["src"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
+[dependency-groups]
+dev = [
+    "dvc[s3]>=3.65.0",
+    "dvc-s3>=3.2.2",
+]
