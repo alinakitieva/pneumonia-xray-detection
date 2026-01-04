@@ -8,9 +8,9 @@ Binary classification of chest X-ray images to detect pneumonia using deep learn
 
 **Input:** Chest X-ray image (grayscale, resized to 224x224)
 
-**Output:** Probability score and predicted label (Pneumonia/Normal)
+**Output:** Probability score (0-1) and predicted label (Pneumonia/Normal)
 
-**Metrics:** Accuracy, Precision, Recall, F1-Score, ROC-AUC
+**Metrics:** Accuracy, Precision, Recall, F1-Score
 
 ## Dataset
 
@@ -69,21 +69,60 @@ ls data/raw/chest_xray/
 ### Training
 
 ```bash
+# Train with default config
 uv run python -m pneumonia_xray.commands train
+
+# Train with config overrides
+uv run python -m pneumonia_xray.commands train trainer.max_epochs=5
+uv run python -m pneumonia_xray.commands train data.batch_size=64
+
+# View resolved config
+uv run python -m pneumonia_xray.commands train --cfg job
 ```
 
-This will:
+Training will:
 
 - Load data from `data/raw/chest_xray/`
 - Train ResNet-18 with pretrained ImageNet weights
+- Log metrics to MLflow (if server running)
 - Save best checkpoint to `artifacts/checkpoints/best.ckpt`
-- Generate plots in `plots/` (confusion matrix, ROC curve)
+- Generate plots in `plots/<run_id>/` (confusion matrix, ROC curve)
 
 ### Inference
 
 ```bash
-uv run python -m pneumonia_xray.commands infer
+# Single image
+uv run python -m pneumonia_xray.commands infer input.path=path/to/image.png
+
+# Folder of images
+uv run python -m pneumonia_xray.commands infer input.path=path/to/folder/
+
+# Example with test data
+uv run python -m pneumonia_xray.commands infer input.path=data/raw/chest_xray/test/NORMAL/IM-0001-0001.jpeg
 ```
+
+Output format:
+
+```
+path=data/raw/chest_xray/test/NORMAL/IM-0001-0001.jpeg prob=0.2104 pred=NORMAL
+```
+
+### MLflow Experiment Tracking
+
+```bash
+# Start MLflow server
+mlflow server --host 127.0.0.1 --port 8080
+
+# Run training (logs automatically)
+uv run python -m pneumonia_xray.commands train
+```
+
+MLflow logs:
+
+- Metrics: train_loss, val_loss, accuracy, precision, recall, F1
+- Hyperparameters: all config values
+- Git commit ID
+- Artifacts: plots, config.yaml
 
 ## Model Architecture
 
@@ -93,27 +132,25 @@ uv run python -m pneumonia_xray.commands infer
 - **Optimizer:** Adam (lr=1e-4)
 - **Scheduler:** ReduceLROnPlateau
 
-## Production
+## Configuration
 
-### Export to ONNX
+All hyperparameters are managed via Hydra YAML configs:
 
-```bash
-# Export trained model to ONNX format
-uv run python -m pneumonia_xray.commands export --format onnx
+```
+configs/
+├── train.yaml           # Main training config
+├── infer.yaml           # Main inference config
+├── data/default.yaml    # Data loading & augmentation
+├── model/resnet18.yaml  # Model architecture
+├── trainer/default.yaml # Training settings
+├── logging/mlflow.yaml  # MLflow settings
+└── postprocess/default.yaml  # Inference thresholds
 ```
 
-### Convert to TensorRT
+Override any parameter via CLI:
 
 ```bash
-# Convert ONNX to TensorRT engine
-uv run python -m pneumonia_xray.commands export --format tensorrt
-```
-
-### Serving
-
-```bash
-# Start MLflow model server
-mlflow models serve -m runs:/<run_id>/model -p 5000
+uv run python -m pneumonia_xray.commands train trainer.learning_rate=0.001 trainer.max_epochs=20
 ```
 
 ## Development
@@ -139,6 +176,5 @@ uv run pytest
 | Config                | Hydra               |
 | Experiment tracking   | MLflow              |
 | Data versioning       | DVC + Cloudflare R2 |
-| Export                | ONNX, TensorRT      |
 | Dependency management | uv                  |
 | Code quality          | ruff, pre-commit    |

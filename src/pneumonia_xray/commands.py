@@ -4,6 +4,8 @@ from pathlib import Path
 import hydra
 from omegaconf import DictConfig
 
+from pneumonia_xray.infer import run_inference
+
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 CONFIG_PATH = str(PROJECT_ROOT / "configs")
 
@@ -20,9 +22,10 @@ def train(cfg: DictConfig) -> None:
 @hydra.main(config_path=CONFIG_PATH, config_name="infer", version_base=None)
 def infer(cfg: DictConfig) -> None:
     """Run inference on X-ray images."""
-    print("Inference not yet implemented")
-    print(f"Would use checkpoint: {cfg.checkpoint_path}")
-    print(f"Threshold: {cfg.postprocess.threshold}")
+
+    results = run_inference(cfg)
+    if results:
+        print(f"\nProcessed {len(results)} image(s)")
 
 
 def main() -> None:
@@ -35,7 +38,8 @@ def main() -> None:
         print("Examples:")
         print("  python -m pneumonia_xray.commands train")
         print("  python -m pneumonia_xray.commands train trainer.max_epochs=5")
-        print("  python -m pneumonia_xray.commands train data.batch_size=64")
+        print("  python -m pneumonia_xray.commands infer input.path=/path/to/image.png")
+        print("  python -m pneumonia_xray.commands infer input.path=/path/to/folder")
         sys.exit(1)
 
     command = sys.argv[1]

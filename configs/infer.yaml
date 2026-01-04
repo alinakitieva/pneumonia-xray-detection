@@ -8,5 +8,9 @@ defaults:
 # Model checkpoint
 checkpoint_path: artifacts/checkpoints/best.ckpt
 
+# Input (override via CLI: input.path=/path/to/image.png)
+input:
+  path: null # single image or folder path
+
 # Output
 output_dir: outputs
