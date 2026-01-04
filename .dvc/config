@@ -1,5 +1,5 @@
 [core]
-    remote = r2-s3
+    remote = r2-https
 ['remote "r2-https"']
     url = https://pneumonia-dvc.alikit.org/dvc-cache
 ['remote "r2-s3"']
