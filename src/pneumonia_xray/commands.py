@@ -56,20 +56,54 @@ def export(cfg: DictConfig) -> None:
         print(f"TensorRT validation: {status} (diff={tv['abs_diff']:.6f})")
 
 
+@hydra.main(config_path=CONFIG_PATH, config_name="serve", version_base=None)
+def serve(cfg: DictConfig) -> None:
+    """Prepare model repository for Triton serving."""
+    from pneumonia_xray.serve import run_prepare_serving
+
+    results = run_prepare_serving(cfg)
+
+    print("\n=== Triton Model Repository ===")
+    if results["model_repository"]:
+        print(f"Repository: {results['model_repository']}")
+        print(f"Model: {results['model_path']}")
+        print(f"Config: {results['config_path']}")
+        print()
+        print("To start Triton server:")
+        print(
+            f"  docker run --rm -p 8000:8000 -p 8001:8001 "
+            f"-v {results['model_repository']}:/models "
+            f"nvcr.io/nvidia/tritonserver:24.01-py3 "
+            f"tritonserver --model-repository=/models"
+        )
+    else:
+        print("Failed to prepare model repository")
+
+
+@hydra.main(config_path=CONFIG_PATH, config_name="serve", version_base=None)
+def triton_infer(cfg: DictConfig) -> None:
+    """Run inference via Triton Inference Server."""
+    from pneumonia_xray.serve import run_triton_inference
+
+    results = run_triton_inference(cfg)
+    if results:
+        print(f"\nProcessed {len(results)} image(s) via Triton")
+
+
 def main() -> None:
     """Main CLI entrypoint."""
     if len(sys.argv) < 2:
         print("Pneumonia X-ray Detection CLI")
-        print("Available commands: train, infer, export")
+        print("Available commands: train, infer, export, serve, triton_infer")
         print("Usage: python -m pneumonia_xray.commands <command> [overrides...]")
         print()
         print("Examples:")
         print("  python -m pneumonia_xray.commands train")
         print("  python -m pneumonia_xray.commands train trainer.max_epochs=5")
         print("  python -m pneumonia_xray.commands infer input.path=/path/to/image.png")
-        print("  python -m pneumonia_xray.commands infer input.path=/path/to/folder")
         print("  python -m pneumonia_xray.commands export")
-        print("  python -m pneumonia_xray.commands export tensorrt.fp16=false")
+        print("  python -m pneumonia_xray.commands serve")
+        print("  python -m pneumonia_xray.commands triton_infer input.path=image.png")
         sys.exit(1)
 
     command = sys.argv[1]
@@ -81,6 +115,10 @@ def main() -> None:
         infer()
     elif command == "export":
         export()
+    elif command == "serve":
+        serve()
+    elif command == "triton_infer":
+        triton_infer()
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)

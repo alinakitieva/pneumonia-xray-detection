@@ -124,6 +124,36 @@ Export generates:
 - `artifacts/export/validation_onnx.json` - Numerical validation report
 - `artifacts/export/model.trt` - TensorRT engine (if trtexec available)
 
+### Serving with Triton
+
+Deploy the model using NVIDIA Triton Inference Server:
+
+```bash
+# 1. Prepare model repository (copies ONNX model)
+uv run python -m pneumonia_xray.commands serve
+
+# 2. Start Triton server (requires Docker)
+docker run --rm -p 8000:8000 -p 8001:8001 \
+  -v $(pwd)/model_repository:/models \
+  nvcr.io/nvidia/tritonserver:24.01-py3 \
+  tritonserver --model-repository=/models
+
+# 3. Run inference via Triton
+uv run python -m pneumonia_xray.commands triton_infer \
+  input.path=data/raw/chest_xray/test/NORMAL/IM-0001-0001.jpeg
+```
+
+**Requirements:**
+
+- Docker with NVIDIA Container Runtime (for GPU) or CPU-only Triton image
+- Model must be exported first (`commands export`)
+
+**Troubleshooting:**
+
+- Check server health: `curl localhost:8000/v2/health/ready`
+- Check model status: `curl localhost:8000/v2/models/pneumonia_xray`
+- Common issues: wrong tensor dims, FP16/FP32 mismatch, missing model version folder
+
 ### MLflow Experiment Tracking
 
 ```bash
@@ -158,6 +188,7 @@ configs/
 ├── train.yaml           # Main training config
 ├── infer.yaml           # Main inference config
 ├── export.yaml          # Model export config
+├── serve.yaml           # Triton serving config
 ├── data/default.yaml    # Data loading & augmentation
 ├── model/resnet18.yaml  # Model architecture
 ├── trainer/default.yaml # Training settings
@@ -186,14 +217,15 @@ uv run pytest
 
 ## Tech Stack
 
-| Component             | Tool                |
-| --------------------- | ------------------- |
-| Training              | PyTorch Lightning   |
-| Model                 | ResNet-18           |
-| Metrics               | torchmetrics        |
-| Config                | Hydra               |
-| Experiment tracking   | MLflow              |
-| Model export          | ONNX, TensorRT      |
-| Data versioning       | DVC + Cloudflare R2 |
-| Dependency management | uv                  |
-| Code quality          | ruff, pre-commit    |
+| Component             | Tool                    |
+| --------------------- | ----------------------- |
+| Training              | PyTorch Lightning       |
+| Model                 | ResNet-18               |
+| Metrics               | torchmetrics            |
+| Config                | Hydra                   |
+| Experiment tracking   | MLflow                  |
+| Model export          | ONNX, TensorRT          |
+| Model serving         | Triton Inference Server |
+| Data versioning       | DVC + Cloudflare R2     |
+| Dependency management | uv                      |
+| Code quality          | ruff, pre-commit        |

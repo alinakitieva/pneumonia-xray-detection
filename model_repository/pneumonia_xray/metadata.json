@@ -1,0 +1,15 @@
+{
+  "image_size": 224,
+  "channels": 3,
+  "normalize": {
+    "mean": [0.485, 0.456, 0.406],
+    "std": [0.229, 0.224, 0.225]
+  },
+  "threshold": 0.5,
+  "labels": {
+    "0": "NORMAL",
+    "1": "PNEUMONIA"
+  },
+  "input_name": "input",
+  "output_name": "logits"
+}
