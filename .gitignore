@@ -207,9 +207,14 @@ marimo/_lsp/
 __marimo__/
 
 # Project-specific
-# Data directory (DVC-tracked)
-data/*
-!data/.gitkeep
+# Data directory contents (DVC-tracked)
+data/raw/**
+data/processed/**
+
+# But allow DVC metadata files
+!data/*.dvc
+!data/**/*.dvc
+!data/.gitignore
 
 # Generated plots and artifacts
 plots/*
