@@ -1,0 +1,10 @@
+# Training configuration
+defaults:
+  - data: default
+  - model: resnet18
+  - trainer: default
+  - _self_
+
+# Output directories
+output_dir: outputs
+plots_dir: plots

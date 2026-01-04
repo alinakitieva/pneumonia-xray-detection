@@ -3,6 +3,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import pytorch_lightning as pl
 import torch
+from omegaconf import DictConfig
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.metrics import ConfusionMatrixDisplay, RocCurveDisplay
 from torch.utils.data import DataLoader
@@ -11,72 +12,57 @@ from pneumonia_xray.datamodule import ChestXrayDataModule
 from pneumonia_xray.lightning_module import PneumoniaClassifier
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-ARTIFACTS_DIR = PROJECT_ROOT / "artifacts" / "checkpoints"
-PLOTS_DIR = PROJECT_ROOT / "plots"
 
 
-def train_model(
-    batch_size: int = 32,
-    num_workers: int = 4,
-    learning_rate: float = 1e-4,
-    max_epochs: int = 10,
-    seed: int = 42,
-    pos_weight: float = 2.9,
-) -> Path:
-    """Train the pneumonia classifier.
+def train_model(cfg: DictConfig) -> Path:
+    """Train the pneumonia classifier using Hydra config.
 
     Args:
-        batch_size: Batch size for training.
-        num_workers: Number of workers for data loading.
-        learning_rate: Learning rate for optimizer.
-        max_epochs: Maximum number of epochs.
-        seed: Random seed for reproducibility.
-        pos_weight: Positive class weight for loss function.
+        cfg: Hydra configuration object.
 
     Returns:
         Path to the best checkpoint.
     """
     # Set seed for reproducibility
-    pl.seed_everything(seed, workers=True)
+    pl.seed_everything(cfg.trainer.seed, workers=True)
 
     # Create directories
-    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
-    PLOTS_DIR.mkdir(parents=True, exist_ok=True)
+    checkpoint_dir = PROJECT_ROOT / cfg.trainer.checkpoint.dirpath
+    plots_dir = PROJECT_ROOT / cfg.plots_dir
+    checkpoint_dir.mkdir(parents=True, exist_ok=True)
+    plots_dir.mkdir(parents=True, exist_ok=True)
 
-    # Initialize data module
-    datamodule = ChestXrayDataModule(
-        batch_size=batch_size,
-        num_workers=num_workers,
-    )
+    # Initialize data module from config
+    datamodule = ChestXrayDataModule.from_config(cfg)
 
-    # Initialize model
+    # Initialize model from config
     model = PneumoniaClassifier(
-        learning_rate=learning_rate,
-        pos_weight=pos_weight,
+        learning_rate=cfg.trainer.learning_rate,
+        pos_weight=cfg.model.pos_weight,
     )
 
-    # Callbacks
+    # Callbacks from config
     checkpoint_callback = ModelCheckpoint(
-        dirpath=ARTIFACTS_DIR,
-        filename="best",
-        monitor="val_loss",
-        mode="min",
-        save_top_k=1,
+        dirpath=checkpoint_dir,
+        filename=cfg.trainer.checkpoint.filename,
+        monitor=cfg.trainer.checkpoint.monitor,
+        mode=cfg.trainer.checkpoint.mode,
+        save_top_k=cfg.trainer.checkpoint.save_top_k,
     )
 
     early_stopping_callback = EarlyStopping(
-        monitor="val_loss",
-        patience=3,
-        mode="min",
+        monitor=cfg.trainer.early_stopping.monitor,
+        patience=cfg.trainer.early_stopping.patience,
+        mode=cfg.trainer.early_stopping.mode,
     )
 
-    # Trainer
+    # Trainer from config
     trainer = pl.Trainer(
-        max_epochs=max_epochs,
-        accelerator="auto",
-        devices=1,
+        max_epochs=cfg.trainer.max_epochs,
+        accelerator=cfg.trainer.accelerator,
+        devices=cfg.trainer.devices,
         callbacks=[checkpoint_callback, early_stopping_callback],
-        deterministic=True,
+        deterministic=cfg.trainer.deterministic,
     )
 
     # Train
@@ -89,12 +75,14 @@ def train_model(
     best_model = PneumoniaClassifier.load_from_checkpoint(
         checkpoint_callback.best_model_path
     )
-    _generate_plots(best_model, datamodule.test_dataloader())
+    _generate_plots(best_model, datamodule.test_dataloader(), plots_dir)
 
     return Path(checkpoint_callback.best_model_path)
 
 
-def _generate_plots(model: PneumoniaClassifier, test_loader: DataLoader) -> None:
+def _generate_plots(
+    model: PneumoniaClassifier, test_loader: DataLoader, plots_dir: Path
+) -> None:
     """Generate confusion matrix and ROC curve plots."""
     model.train(False)
     device = next(model.parameters()).device
@@ -124,7 +112,7 @@ def _generate_plots(model: PneumoniaClassifier, test_loader: DataLoader) -> None
         cmap="Blues",
     )
     ax.set_title("Confusion Matrix")
-    fig.savefig(PLOTS_DIR / "confusion_matrix.png", dpi=150, bbox_inches="tight")
+    fig.savefig(plots_dir / "confusion_matrix.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
 
     # ROC Curve
@@ -136,7 +124,7 @@ def _generate_plots(model: PneumoniaClassifier, test_loader: DataLoader) -> None
         name="Pneumonia Classifier",
     )
     ax.set_title("ROC Curve")
-    fig.savefig(PLOTS_DIR / "roc_curve.png", dpi=150, bbox_inches="tight")
+    fig.savefig(plots_dir / "roc_curve.png", dpi=150, bbox_inches="tight")
     plt.close(fig)
 
-    print(f"Plots saved to {PLOTS_DIR}")
+    print(f"Plots saved to {plots_dir}")

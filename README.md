@@ -14,7 +14,7 @@ Binary classification of chest X-ray images to detect pneumonia using deep learn
 
 ## Dataset
 
-**Chest X-Ray Images (Pneumonia)** - 17,591 images organized into train/val/test splits.
+**Chest X-Ray Images (Pneumonia)** - 5,856 images organized into train/val/test splits.
 
 | Split | Normal | Pneumonia | Total |
 | ----- | ------ | --------- | ----- |
@@ -52,7 +52,7 @@ uv sync --all-extras
 uv run dvc pull
 ```
 
-This downloads ~2.5 GB of chest X-ray images to `data/raw/chest_xray/`.
+This downloads ~1.2 GB of chest X-ray images to `data/raw/chest_xray/`.
 
 ### 3. Verify installation
 
@@ -72,13 +72,26 @@ ls data/raw/chest_xray/
 uv run python -m pneumonia_xray.commands train
 ```
 
-Training logs are sent to MLflow (default: `127.0.0.1:8080`).
+This will:
+
+- Load data from `data/raw/chest_xray/`
+- Train ResNet-18 with pretrained ImageNet weights
+- Save best checkpoint to `artifacts/checkpoints/best.ckpt`
+- Generate plots in `plots/` (confusion matrix, ROC curve)
 
 ### Inference
 
 ```bash
 uv run python -m pneumonia_xray.commands infer
 ```
+
+## Model Architecture
+
+- **Backbone:** ResNet-18 (pretrained on ImageNet)
+- **Head:** Linear layer (512 -> 1)
+- **Loss:** BCEWithLogitsLoss with pos_weight=2.9 (handles class imbalance)
+- **Optimizer:** Adam (lr=1e-4)
+- **Scheduler:** ReduceLROnPlateau
 
 ## Production
 
@@ -118,13 +131,14 @@ uv run pytest
 
 ## Tech Stack
 
-| Component             | Tool                             |
-| --------------------- | -------------------------------- |
-| Training              | PyTorch Lightning                |
-| Model                 | ResNet-18 (pretrained)           |
-| Config                | Hydra                            |
-| Experiment tracking   | MLflow                           |
-| Data versioning       | DVC + Cloudflare R2              |
-| Export                | ONNX, TensorRT                   |
-| Dependency management | uv                               |
-| Code quality          | black, isort, flake8, pre-commit |
+| Component             | Tool                |
+| --------------------- | ------------------- |
+| Training              | PyTorch Lightning   |
+| Model                 | ResNet-18           |
+| Metrics               | torchmetrics        |
+| Config                | Hydra               |
+| Experiment tracking   | MLflow              |
+| Data versioning       | DVC + Cloudflare R2 |
+| Export                | ONNX, TensorRT      |
+| Dependency management | uv                  |
+| Code quality          | ruff, pre-commit    |

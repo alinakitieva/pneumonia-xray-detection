@@ -1,28 +1,46 @@
 import sys
+from pathlib import Path
 
-from pneumonia_xray.train import train_model
+import hydra
+from omegaconf import DictConfig
+
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+CONFIG_PATH = str(PROJECT_ROOT / "configs")
 
 
-def train() -> None:
+@hydra.main(config_path=CONFIG_PATH, config_name="train", version_base=None)
+def train(cfg: DictConfig) -> None:
     """Train the pneumonia detection model."""
+    from pneumonia_xray.train import train_model
 
-    checkpoint_path = train_model()
+    checkpoint_path = train_model(cfg)
     print(f"Training complete. Best checkpoint: {checkpoint_path}")
 
 
-def infer() -> None:
+@hydra.main(config_path=CONFIG_PATH, config_name="infer", version_base=None)
+def infer(cfg: DictConfig) -> None:
     """Run inference on X-ray images."""
-    pass
+    print("Inference not yet implemented")
+    print(f"Would use checkpoint: {cfg.checkpoint_path}")
+    print(f"Threshold: {cfg.postprocess.threshold}")
 
 
-if __name__ == "__main__":
+def main() -> None:
+    """Main CLI entrypoint."""
     if len(sys.argv) < 2:
         print("Pneumonia X-ray Detection CLI")
         print("Available commands: train, infer")
-        print("Usage: python -m pneumonia_xray.commands <command>")
+        print("Usage: python -m pneumonia_xray.commands <command> [overrides...]")
+        print()
+        print("Examples:")
+        print("  python -m pneumonia_xray.commands train")
+        print("  python -m pneumonia_xray.commands train trainer.max_epochs=5")
+        print("  python -m pneumonia_xray.commands train data.batch_size=64")
         sys.exit(1)
 
     command = sys.argv[1]
+    sys.argv = [sys.argv[0]] + sys.argv[2:]
+
     if command == "train":
         train()
     elif command == "infer":
@@ -30,3 +48,7 @@ if __name__ == "__main__":
     else:
         print(f"Unknown command: {command}")
         sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()

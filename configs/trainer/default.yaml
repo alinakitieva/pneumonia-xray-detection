@@ -1,0 +1,26 @@
+# Trainer configuration
+max_epochs: 10
+accelerator: auto
+devices: 1
+deterministic: true
+
+# Optimizer
+learning_rate: 1.0e-4
+optimizer: adam
+weight_decay: 0.0
+
+# Reproducibility
+seed: 42
+
+# Callbacks
+checkpoint:
+  dirpath: artifacts/checkpoints
+  filename: best
+  monitor: val_loss
+  mode: min
+  save_top_k: 1
+
+early_stopping:
+  monitor: val_loss
+  patience: 3
+  mode: min

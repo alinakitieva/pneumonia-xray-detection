@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import Optional
 
 import pytorch_lightning as pl
+from omegaconf import DictConfig
 from torch.utils.data import DataLoader
 from torchvision import transforms
 from torchvision.datasets import ImageFolder
@@ -18,6 +19,10 @@ class ChestXrayDataModule(pl.LightningDataModule):
         batch_size: int = 32,
         num_workers: int = 4,
         image_size: int = 224,
+        normalize_mean: Optional[list[float]] = None,
+        normalize_std: Optional[list[float]] = None,
+        augmentation_flip: bool = True,
+        augmentation_rotation: int = 10,
     ):
         super().__init__()
         self.data_dir = data_dir
@@ -25,24 +30,49 @@ class ChestXrayDataModule(pl.LightningDataModule):
         self.num_workers = num_workers
         self.image_size = image_size
 
+        # Normalization (ImageNet defaults)
+        self.normalize_mean = normalize_mean or [0.485, 0.456, 0.406]
+        self.normalize_std = normalize_std or [0.229, 0.224, 0.225]
+
+        # Augmentation
+        self.augmentation_flip = augmentation_flip
+        self.augmentation_rotation = augmentation_rotation
+
         self.train_dataset: Optional[ImageFolder] = None
         self.val_dataset: Optional[ImageFolder] = None
         self.test_dataset: Optional[ImageFolder] = None
 
+    @classmethod
+    def from_config(cls, cfg: DictConfig) -> "ChestXrayDataModule":
+        """Create DataModule from Hydra config."""
+        data_cfg = cfg.data
+        return cls(
+            data_dir=Path(data_cfg.root) if data_cfg.root else None,
+            batch_size=data_cfg.batch_size,
+            num_workers=data_cfg.num_workers,
+            image_size=data_cfg.image_size,
+            normalize_mean=list(data_cfg.normalize.mean),
+            normalize_std=list(data_cfg.normalize.std),
+            augmentation_flip=data_cfg.augmentation.horizontal_flip,
+            augmentation_rotation=data_cfg.augmentation.rotation_degrees,
+        )
+
     @property
     def train_transform(self) -> transforms.Compose:
-        return transforms.Compose(
+        transform_list = [
+            transforms.Resize((self.image_size, self.image_size)),
+        ]
+        if self.augmentation_flip:
+            transform_list.append(transforms.RandomHorizontalFlip())
+        if self.augmentation_rotation > 0:
+            transform_list.append(transforms.RandomRotation(self.augmentation_rotation))
+        transform_list.extend(
             [
-                transforms.Resize((self.image_size, self.image_size)),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomRotation(10),
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225],
-                ),
+                transforms.Normalize(mean=self.normalize_mean, std=self.normalize_std),
             ]
         )
+        return transforms.Compose(transform_list)
 
     @property
     def val_transform(self) -> transforms.Compose:
@@ -50,10 +80,7 @@ class ChestXrayDataModule(pl.LightningDataModule):
             [
                 transforms.Resize((self.image_size, self.image_size)),
                 transforms.ToTensor(),
-                transforms.Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225],
-                ),
+                transforms.Normalize(mean=self.normalize_mean, std=self.normalize_std),
             ]
         )
 

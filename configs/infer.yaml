@@ -1,0 +1,12 @@
+# Inference configuration
+defaults:
+  - data: default
+  - model: resnet18
+  - postprocess: default
+  - _self_
+
+# Model checkpoint
+checkpoint_path: artifacts/checkpoints/best.ckpt
+
+# Output
+output_dir: outputs

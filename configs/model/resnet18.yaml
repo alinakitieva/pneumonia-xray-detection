@@ -1,0 +1,7 @@
+# Model configuration
+name: resnet18
+pretrained: true
+num_classes: 1 # binary classification (single logit output)
+
+# Class imbalance handling
+pos_weight: 2.9 # ratio of negative to positive samples

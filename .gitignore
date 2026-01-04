@@ -229,3 +229,6 @@ mlruns/
 # DVC
 .dvc/tmp/
 .dvc/cache/
+
+lightning_logs/
+outputs/

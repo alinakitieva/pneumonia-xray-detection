@@ -1,0 +1,6 @@
+# Postprocessing configuration
+threshold: 0.5
+
+labels:
+  0: NORMAL
+  1: PNEUMONIA

@@ -1,0 +1,15 @@
+# Data configuration
+root: data/raw/chest_xray
+image_size: 224
+batch_size: 32
+num_workers: 4
+
+# Normalization (ImageNet defaults)
+normalize:
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+# Augmentation
+augmentation:
+  horizontal_flip: true
+  rotation_degrees: 10
